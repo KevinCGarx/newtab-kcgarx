@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>New Tab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050506;
+    --white: #f4f4f6;
+    --gray: #9a9aa2;
+    --gray-dim: #55555c;
+    --glass: rgba(255,255,255,0.05);
+    --glass-border: rgba(255,255,255,0.16);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Quicksand', sans-serif;
+    color: var(--white);
+    background: radial-gradient(ellipse at 30% 20%, #131318 0%, transparent 60%),
+                radial-gradient(ellipse at 75% 75%, #0c0c10 0%, transparent 55%),
+                var(--bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .star {
+    position: fixed;
+    background: #fff;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 4px rgba(255,255,255,0.8);
+    animation: twinkle ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.7); }
+    50% { opacity: 1; transform: scale(1.3); }
+  }
+
+  /* HUD: time / date / weather, monochrome */
+  .hud {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    user-select: none;
+  }
+  .hud-panel {
+    background: linear-gradient(100deg, #2a2a30 0%, #101013 100%);
+    border: 1px solid var(--glass-border);
+    clip-path: polygon(0 0, 100% 0, 86% 100%, 0 100%);
+    padding: 10px 40px 10px 16px;
+  }
+  .hud-time { font-size: 30px; font-weight: 700; color: var(--white); letter-spacing: 1px; line-height: 1; white-space: nowrap; }
+  .hud-date { font-size: 11px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; white-space: nowrap; }
+  .hud-period {
+    display: inline-block;
+    margin-top: 2px;
+    background: #17171b;
+    border: 1px solid var(--glass-border);
+    color: var(--white);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 4px 16px 4px 10px;
+    clip-path: polygon(0 0, 100% 0, 82% 100%, 0 100%);
+  }
+  .weather-widget {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border-left: 3px solid var(--gray);
+    padding: 6px 16px 6px 10px;
+    backdrop-filter: blur(4px);
+  }
+  .weather-temp { font-size: 16px; font-weight: 700; color: var(--white); white-space: nowrap; }
+
+  /* search bar: top-center */
+  .search-wrap {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    width: min(90vw, 420px);
+  }
+  form.search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(8px);
+    border-radius: 999px;
+    padding: 6px 8px 6px 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  form.search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--white);
+    font-family: 'Quicksand', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 10px 0;
+  }
+  form.search input::placeholder { color: var(--gray); }
+  form.search button {
+    border: none;
+    background: var(--white);
+    color: #0a0a0c;
+    font-weight: 700;
+    font-family: 'Quicksand', sans-serif;
+    padding: 11px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  form.search button:hover { transform: translateY(-1px); opacity: 0.85; }
+  form.search button:active { transform: translateY(0); }
+
+  main {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 24px 40px;
+    text-align: center;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  .greeting {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-weight: 700;
+    font-size: clamp(18px, 5vw, 26px);
+    letter-spacing: 0.5px;
+    margin: 0 0 34px;
+    color: var(--white);
+  }
+
+  .links {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 14px;
+    width: 100%;
+  }
+  .links a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 6px;
+    text-decoration: none;
+    color: var(--white);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .links a:hover {
+    transform: translateY(-3px);
+    background: rgba(255,255,255,0.09);
+    border-color: var(--white);
+  }
+  .links svg { width: 22px; height: 22px; }
+
+  .gif-slot {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 6;
+    width: 180px;
+    background: #1a1a1e;
+    border: 1px solid #3a3a42;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    transition: width 0.2s ease, height 0.2s ease;
+  }
+  .gif-slot.maximized { width: 320px; }
+
+  .win-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, #2c2c32, #1e1e22);
+    border-bottom: 1px solid #3a3a42;
+    padding: 5px 6px 5px 10px;
+    cursor: default;
+    user-select: none;
+  }
+  .win-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--gray);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .win-buttons { display: flex; gap: 4px; }
+  .win-btn {
+    width: 20px;
+    height: 18px;
+    border: none;
+    background: #33333a;
+    color: var(--white);
+    font-size: 11px;
+    line-height: 1;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .win-btn:hover { background: #45454e; }
+  .win-btn.win-close:hover { background: #e0263f; }
+
+  .win-body {
+    width: 100%;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .gif-slot.maximized .win-body { height: 280px; }
+  .gif-slot.minimized .win-body { display: none; }
+
+  .win-body img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+  }
+  .win-body .placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--gray);
+    text-align: center;
+    line-height: 1.5;
+    padding: 0 10px;
+  }
+
+  .win-volume {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #1e1e22;
+    border-top: 1px solid #3a3a42;
+  }
+  .gif-slot.minimized .win-volume { display: none; }
+  .win-volume input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    background: #45454e;
+    border-radius: 999px;
+    outline: none;
+  }
+  .win-volume input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--white);
+    cursor: pointer;
+  }
+  .win-volume input[type="range"]::-moz-range-thumb {
+    width: 11px;
+    height: 11px;
+    border: none;
+    border-radius: 50%;
+    background: var(--white);
+    cursor: pointer;
+  }
+  .win-volume-val {
+    font-size: 10px;
+    color: var(--gray);
+    width: 30px;
+    text-align: right;
+  }
+
+  @media (max-width: 480px) {
+    .gif-slot { width: 130px; }
+    .win-body { height: 120px; }
+  }
+
+  @media (max-width: 480px) {
+    .links { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .links a { padding: 12px 4px; font-size: 10px; }
+    .hud-time { font-size: 22px; }
+    .search-wrap { top: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hud">
+  <div class="hud-panel">
+    <div class="hud-time" id="hud-time">--:--</div>
+    <div class="hud-date" id="hud-date">--- -- ---</div>
+  </div>
+  <div class="hud-period" id="hud-period">·</div>
+  <div class="weather-widget">
+    <span id="weather-icon"></span>
+    <span class="weather-temp" id="weather-temp">--°</span>
+  </div>
+</div>
+
+<div class="search-wrap">
+  <form class="search" action="https://www.google.com/search" method="GET" target="_blank">
+    <input type="text" name="q" placeholder="search the web..." autofocus>
+    <button type="submit">go</button>
+  </form>
+</div>
+
+<main>
+  <div class="greeting" id="greeting">初音ミクだよ!</div>
+
+  <div class="links">
+    <a href="https://youtube.com" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M22 12s0-3.4-.4-5a2.5 2.5 0 0 0-1.8-1.8C18.1 5 12 5 12 5s-6.1 0-7.8.2A2.5 2.5 0 0 0 2.4 7C2 8.6 2 12 2 12s0 3.4.4 5a2.5 2.5 0 0 0 1.8 1.8c1.7.2 7.8.2 7.8.2s6.1 0 7.8-.2A2.5 2.5 0 0 0 21.6 17c.4-1.6.4-5 .4-5Z" stroke="#f4f4f6" stroke-width="1.6"/><path d="M10 9.5v5l4.5-2.5L10 9.5Z" fill="#f4f4f6"/></svg>
+      youtube
+    </a>
+    <a href="https://x.com" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 4l7.5 8.4L4.4 20H7l5.6-6.3L17 20h3l-7.8-8.8L19.6 4H17l-5.2 5.8L7.3 4H4Z" fill="#f4f4f6"/></svg>
+      x
+    </a>
+    <a href="https://gemini.google.com/" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke="#f4f4f6" stroke-width="1.6"/><circle cx="9" cy="13" r="1.3" fill="#f4f4f6"/><circle cx="15" cy="13" r="1.3" fill="#f4f4f6"/><path d="M8.5 16.5c1 .8 2.2 1.2 3.5 1.2s2.5-.4 3.5-1.2" stroke="#f4f4f6" stroke-width="1.4" stroke-linecap="round"/><path d="M12 5v3M17 6l-1.2 2" stroke="#f4f4f6" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Gemini
+    </a>
+    <a href="https://twitch.tv" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M5 3 3.5 6.5v13H8V22l3-2.5h4L20 15V3H5Z" stroke="#f4f4f6" stroke-width="1.5"/><path d="M12.5 8v4M16.5 8v4" stroke="#f4f4f6" stroke-width="1.6" stroke-linecap="round"/></svg>
+      twitch
+    </a>
+    <a href="https://myanimelist.net" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" stroke="#f4f4f6" stroke-width="1.6"/><path d="M8 15v-6l2 3 2-3v6M15 9v6h3" stroke="#f4f4f6" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      mal
+    </a>
+    <a href="https://github.com" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.1.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.56-1.11-4.56-4.93 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.9-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.83-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" fill="#f4f4f6"/></svg>
+      github
+    </a>
+    <a href="https://mail.google.com" target="_blank">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="5" width="19" height="14" rx="2" stroke="#f4f4f6" stroke-width="1.6"/><path d="M3.5 6.5 12 13l8.5-6.5" stroke="#f4f4f6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      gmail
+    </a>
+    <a href="https://animepahe.pw">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 3c1 2 2.5 3 4.5 3.2-1.5 1-2 2.6-1.8 4.3 1.7-.5 3-1.6 3.3-3.5 1 1.8.6 4-1 5.3 1.8.3 3 1.7 3 3.7-2-.8-3.8-.5-5 .8-.5-2-2-3-4-3s-3.5 1-4 3c-1.2-1.3-3-1.6-5-.8 0-2 1.2-3.4 3-3.7-1.6-1.3-2-3.5-1-5.3.3 1.9 1.6 3 3.3 3.5.2-1.7-.3-3.3-1.8-4.3C9.5 6 11 5 12 3Z" stroke="#f4f4f6" stroke-width="1.4" stroke-linejoin="round"/><circle cx="9.5" cy="15.5" r="1" fill="#f4f4f6"/><circle cx="14.5" cy="15.5" r="1" fill="#f4f4f6"/></svg>
+      AnimePahe
+    </a>
+  </div>
+</main>
+
+<div class="gif-slot" id="gif-window">
+  <div class="win-titlebar">
+    <span class="win-title">miku.gif</span>
+    <div class="win-buttons">
+      <button class="win-btn win-min" id="win-min" title="Minimize">&#8722;</button>
+      <button class="win-btn win-max" id="win-max" title="Maximize">&#9633;</button>
+      <button class="win-btn win-close" id="win-close" title="Close">&times;</button>
+    </div>
+  </div>
+  <div class="win-body" id="win-body">
+    <img id="miku-gif" src="miku.gif" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+    <div class="placeholder" style="display:none;">miku.gif<br>drop it next to this file</div>
+  </div>
+  <div class="win-volume">
+    <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="#cabfe0"/><path d="M16 9a4 4 0 0 1 0 6" stroke="#cabfe0" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <input type="range" id="miku-volume" min="0" max="100" value="80">
+    <span class="win-volume-val" id="miku-volume-val">80%</span>
+  </div>
+  <audio id="miku-audio" src="miku.mp3" preload="none"></audio>
+</div>
+
+<script>
+  /* twinkling starfield */
+  const starLayer = document.createDocumentFragment();
+  for (let i = 0; i < 90; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = 1 + Math.random() * 2;
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    s.style.top = Math.random() * 100 + 'vh';
+    s.style.left = Math.random() * 100 + 'vw';
+    s.style.animationDuration = (1.5 + Math.random() * 3.5) + 's';
+    s.style.animationDelay = (Math.random() * 4) + 's';
+    starLayer.appendChild(s);
+  }
+  document.body.appendChild(starLayer);
+
+  /* greetings, miku-flavored */
+  const greetings = [
+    "初音ミクだよ!",
+    "ミクとお散歩しよ〜",
+    "今日も頑張ろうね!",
+    "調子はどう?",
+    "一緒に何か聴く?",
+    "おかえりなさい!"
+  ];
+  document.getElementById('greeting').textContent =
+    greetings[Math.floor(Math.random() * greetings.length)];
+
+  /* HUD clock, 12-hour */
+  function pad(n) { return n.toString().padStart(2, '0'); }
+  function updateHud() {
+    const now = new Date();
+    let h12 = now.getHours() % 12 || 12;
+    const ampm = now.getHours() >= 12 ? 'pm' : 'am';
+    document.getElementById('hud-time').textContent = `${h12}:${pad(now.getMinutes())} ${ampm}`;
+    const days = ['sun','mon','tue','wed','thu','fri','sat'];
+    const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    document.getElementById('hud-date').textContent = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`;
+    const h = now.getHours();
+    let period;
+    if (h >= 5 && h < 12) period = 'morning';
+    else if (h >= 12 && h < 17) period = 'afternoon';
+    else if (h >= 17 && h < 20) period = 'evening';
+    else period = 'night';
+    document.getElementById('hud-period').textContent = period;
+  }
+  updateHud();
+  setInterval(updateHud, 15000);
+
+  /* weather icons, monochrome-friendly */
+  const sunIconSVG = `
+    <svg viewBox="0 0 40 40" width="30" height="30">
+      <circle cx="20" cy="20" r="7" fill="#f4f4f6"/>
+      <g stroke="#f4f4f6" stroke-width="2.5" stroke-linecap="round">
+        <line x1="20" y1="4" x2="20" y2="9"/>
+        <line x1="20" y1="31" x2="20" y2="36"/>
+        <line x1="4" y1="20" x2="9" y2="20"/>
+        <line x1="31" y1="20" x2="36" y2="20"/>
+        <line x1="8.5" y1="8.5" x2="12" y2="12"/>
+        <line x1="28" y1="28" x2="31.5" y2="31.5"/>
+        <line x1="8.5" y1="31.5" x2="12" y2="28"/>
+        <line x1="28" y1="12" x2="31.5" y2="8.5"/>
+        <animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="18s" repeatCount="indefinite"/>
+      </g>
+    </svg>`;
+  const moonIconSVG = `
+    <svg viewBox="0 0 40 40" width="30" height="30">
+      <path d="M25 8a14 14 0 1 0 8 22 11 11 0 0 1-8-22z" fill="#e6e6ea"/>
+      <circle cx="10" cy="10" r="1.2" fill="#fff"><animate attributeName="opacity" values="1;0.2;1" dur="2.4s" repeatCount="indefinite"/></circle>
+      <circle cx="15" cy="6" r="0.9" fill="#fff"><animate attributeName="opacity" values="0.3;1;0.3" dur="3.1s" repeatCount="indefinite"/></circle>
+    </svg>`;
+  const cloudIconSVG = `
+    <svg viewBox="0 0 50 40" width="34" height="27">
+      <g>
+        <ellipse cx="18" cy="24" rx="12" ry="8" fill="#8a8a92"/>
+        <ellipse cx="28" cy="20" rx="9" ry="7" fill="#b3b3ba"/>
+        <animateTransform attributeName="transform" type="translate" values="-3 0; 3 0; -3 0" dur="6s" repeatCount="indefinite"/>
+      </g>
+      <g>
+        <ellipse cx="32" cy="27" rx="10" ry="6.5" fill="#6f6f77" opacity="0.85"/>
+        <animateTransform attributeName="transform" type="translate" values="3 0; -3 0; 3 0" dur="7s" repeatCount="indefinite"/>
+      </g>
+    </svg>`;
+  const rainIconSVG = `
+    <svg viewBox="0 0 50 46" width="34" height="31">
+      <ellipse cx="24" cy="16" rx="14" ry="9" fill="#7a7a82"/>
+      <ellipse cx="14" cy="20" rx="9" ry="7" fill="#9a9aa2"/>
+      <g stroke="#cfd8dc" stroke-width="2" stroke-linecap="round">
+        <line x1="14" y1="26" x2="12" y2="34">
+          <animate attributeName="y1" values="26;34" dur="0.9s" repeatCount="indefinite"/>
+          <animate attributeName="y2" values="34;42" dur="0.9s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0" dur="0.9s" repeatCount="indefinite"/>
+        </line>
+        <line x1="24" y1="26" x2="22" y2="34">
+          <animate attributeName="y1" values="26;34" dur="0.9s" begin="0.3s" repeatCount="indefinite"/>
+          <animate attributeName="y2" values="34;42" dur="0.9s" begin="0.3s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0" dur="0.9s" begin="0.3s" repeatCount="indefinite"/>
+        </line>
+        <line x1="34" y1="26" x2="32" y2="34">
+          <animate attributeName="y1" values="26;34" dur="0.9s" begin="0.6s" repeatCount="indefinite"/>
+          <animate attributeName="y2" values="34;42" dur="0.9s" begin="0.6s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0" dur="0.9s" begin="0.6s" repeatCount="indefinite"/>
+        </line>
+      </g>
+    </svg>`;
+  const weatherIcons = { sun: sunIconSVG, moon: moonIconSVG, cloud: cloudIconSVG, rain: rainIconSVG };
+  function setWeatherIcon(type) {
+    document.getElementById('weather-icon').innerHTML = weatherIcons[type] || cloudIconSVG;
+  }
+  function classifyWeather(code, isDay) {
+    if ([0, 1].includes(code)) return isDay ? 'sun' : 'moon';
+    if ([2, 3, 45, 48].includes(code)) return 'cloud';
+    if ([51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(code)) return 'rain';
+    if ([71,73,75,77,85,86].includes(code)) return 'cloud';
+    return isDay ? 'sun' : 'moon';
+  }
+  async function loadWeather(lat, lon) {
+    try {
+      const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+      const data = await res.json();
+      const cw = data.current_weather;
+      document.getElementById('weather-temp').textContent = Math.round(cw.temperature) + '°C';
+      setWeatherIcon(classifyWeather(cw.weathercode, cw.is_day === 1));
+    } catch (e) {
+      document.getElementById('weather-temp').textContent = '--°';
+      setWeatherIcon('cloud');
+    }
+  }
+  // Hardcoded location: Ciudad Hidalgo, Michoacán, MX — no permission prompt needed
+  loadWeather(19.6927, -100.5540);
+
+  /* miku window: minimize / maximize / close + click-to-play audio */
+  const gifWindow = document.getElementById('gif-window');
+  const winBody = document.getElementById('win-body');
+  const mikuAudio = document.getElementById('miku-audio');
+  const mikuVolume = document.getElementById('miku-volume');
+  const mikuVolumeVal = document.getElementById('miku-volume-val');
+
+  mikuAudio.volume = 0.8;
+  mikuVolume.addEventListener('input', () => {
+    mikuAudio.volume = mikuVolume.value / 100;
+    mikuVolumeVal.textContent = mikuVolume.value + '%';
+  });
+  mikuVolume.addEventListener('click', (e) => e.stopPropagation());
+
+  document.getElementById('win-min').addEventListener('click', () => {
+    gifWindow.classList.toggle('minimized');
+  });
+  document.getElementById('win-max').addEventListener('click', () => {
+    gifWindow.classList.toggle('maximized');
+  });
+  document.getElementById('win-close').addEventListener('click', () => {
+    gifWindow.style.display = 'none';
+  });
+  winBody.addEventListener('click', () => {
+    if (mikuAudio.paused) {
+      mikuAudio.play().catch(() => {});
+    } else {
+      mikuAudio.pause();
+    }
+  });
+</script>
+
+</body>
+</html>
